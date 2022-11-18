@@ -2,6 +2,7 @@ import chalk from "chalk";
 import express from "express";
 import cors from "cors";
 
+import dayjs from "dayjs";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 
@@ -10,7 +11,7 @@ import {
     sessionsCollection,
     entriesCollection,
     exitiesCollection,
-} from "./db/collections.js";
+} from "./database/collections.js";
 
 const app = express();
 app.use(cors());
@@ -117,9 +118,79 @@ app.get("/home", async (req, res) => {
     }
 });
 
-app.post("/new-entry", async (req, res) => {});
+app.post("/new-entry", async (req, res) => {
+    const { value, description } = req.body;
+    const token = req.headers.authorization?.replace("Bearer ", "");
 
-app.post("/new-exit", async (req, res) => {});
+    if (!value || !description) {
+        res.sendStatus(404);
+        return;
+    }
+
+    if (!token) {
+        res.sendStatus(401);
+        return;
+    }
+
+    try {
+        const session = await sessionsCollection.findOne({ token });
+
+        if (!session) {
+            res.sendStatus(401);
+            return;
+        }
+
+        await entriesCollection.insertOne({
+            date: dayjs().format("DD/MM"),
+            value,
+            description,
+            userId: session.userId,
+        });
+
+        res.sendStatus(201);
+        return;
+    } catch (err) {
+        console.log(chalk.bold.red(err));
+        res.status(500).send(err.message);
+    }
+});
+
+app.post("/new-exit", async (req, res) => {
+    const { value, description } = req.body;
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!value || !description) {
+        res.sendStatus(404);
+        return;
+    }
+
+    if (!token) {
+        res.sendStatus(401);
+        return;
+    }
+
+    try {
+        const session = await sessionsCollection.findOne({ token });
+
+        if (!session) {
+            res.sendStatus(401);
+            return;
+        }
+
+        await exitiesCollection.insertOne({
+            date: dayjs().format("DD/MM"),
+            value,
+            description,
+            userId: session.userId,
+        });
+
+        res.sendStatus(201);
+        return;
+    } catch (err) {
+        console.log(chalk.bold.red(err));
+        res.status(500).send(err.message);
+    }
+});
 
 app.listen(5000, () => {
     console.log(chalk.bold.cyan("[Listening ON] Port: 5000."));
