@@ -2,16 +2,19 @@ import chalk from "chalk";
 import express from "express";
 import cors from "cors";
 
-import db from "./db/db.js";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
+
+import {
+    usersCollection,
+    sessionsCollection,
+    entriesCollection,
+    exitiesCollection,
+} from "./db/collections.js";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const usersCollection = db.collection("users");
-const sessionsCollection = db.collection("sessions");
 
 app.post("/sign-in", async (req, res) => {
     const { email, password } = req.body;
@@ -76,7 +79,43 @@ app.post("/sign-up", async (req, res) => {
     }
 });
 
-app.get("/home", async (req, res) => {});
+app.get("/home", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+        res.sendStatus(401);
+        return;
+    }
+
+    try {
+        const session = await sessionsCollection.findOne({ token });
+
+        if (!session) {
+            res.sendStatus(401);
+            return;
+        }
+
+        const { name } = await usersCollection.findOne({
+            _id: session.userId,
+        });
+
+        const entries = await entriesCollection
+            .find({ userId: session.userId })
+            .toArray();
+        const exities = await exitiesCollection
+            .find({ userId: session.userId })
+            .toArray();
+
+        res.send({
+            name,
+            entries,
+            exities,
+        });
+    } catch (err) {
+        console.log(chalk.bold.red(err));
+        res.status(500).send(err.message);
+    }
+});
 
 app.post("/new-entry", async (req, res) => {});
 
