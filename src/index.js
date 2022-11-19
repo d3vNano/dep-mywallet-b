@@ -36,10 +36,11 @@ app.post("/sign-in", async (req, res) => {
 
         const token = uuidv4();
         sessionsCollection.insertOne({
+            user: user.name,
             token,
             userId: user._id,
         });
-        res.send(token);
+        res.send("token: " + token);
         return;
     } catch (err) {
         console.log(chalk.bold.red(err));
@@ -96,10 +97,6 @@ app.get("/home", async (req, res) => {
             return;
         }
 
-        const { name } = await usersCollection.findOne({
-            _id: session.userId,
-        });
-
         const entries = await entriesCollection
             .find({ userId: session.userId })
             .toArray();
@@ -108,7 +105,7 @@ app.get("/home", async (req, res) => {
             .toArray();
 
         res.send({
-            name,
+            user: session.user,
             entries,
             exities,
         });
@@ -186,6 +183,30 @@ app.post("/new-exit", async (req, res) => {
 
         res.sendStatus(201);
         return;
+    } catch (err) {
+        console.log(chalk.bold.red(err));
+        res.status(500).send(err.message);
+    }
+});
+
+app.delete("/sessions", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+        res.sendStatus(401);
+        return;
+    }
+
+    try {
+        const session = await sessionsCollection.findOne({ token });
+
+        if (!session) {
+            res.sendStatus(401);
+            return;
+        }
+
+        await sessionsCollection.deleteOne({ userId: session.userId });
+        res.status(200).send("Até logo " + session.user);
     } catch (err) {
         console.log(chalk.bold.red(err));
         res.status(500).send(err.message);
