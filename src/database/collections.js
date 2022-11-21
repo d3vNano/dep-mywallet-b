@@ -2,12 +2,6 @@ import db from "./db.js";
 
 const usersCollection = db.collection("users");
 const sessionsCollection = db.collection("sessions");
-const entriesCollection = db.collection("entries");
-const exitiesCollection = db.collection("exities");
+const transactionsCollection = db.collection("transactions");
 
-export {
-    usersCollection,
-    sessionsCollection,
-    entriesCollection,
-    exitiesCollection,
-};
+export { usersCollection, sessionsCollection, transactionsCollection };
